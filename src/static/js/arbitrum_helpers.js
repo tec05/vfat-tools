@@ -15,8 +15,9 @@ const ArbitrumTokens = [
     { "id": "wrapped-ether", "symbol": "WETH", "contract": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"},
     { "id": "sushi", "symbol": "SUSHI", "contract": "0xd4d42F0b6DEF4CE0383636770eF773390d85c61A"},
     { "id": "badger-dao", "symbol": "BADGER", "contract": "0xBfa641051Ba0a0Ad1b0AcF549a89536A0D76472E"},
-    { "id": "mcdex", "symbol": "MCB", "contract": "0x4e352cF164E64ADCBad318C3a1e222E9EBa4Ce42"},
     { "id": "xdollar", "symbol": "XDO", "contract": "0x9ef758ac000a354479e538b8b2f01b917b8e89e7"},
+    { "id": "renbtc", "symbol": "RENBTC", "contract": "0xDBf31dF14B66535aF65AaC99C32e9eA844e14501"},
+    { "id": "mcdex", "symbol": "MCB", "contract": "0x4e352cF164E64ADCBad318C3a1e222E9EBa4Ce42"}
 ];
 
 const uniSqrtPrice = (tokenDecimals, sqrtRatioX96) => {
@@ -260,6 +261,40 @@ async function getArbitrumDlpPool(App, dlpPool, tokenAddress, originTokenAddress
   }
 }
 
+async function getArbitrumCurvePool(App, tokenAddress, stakingAddress) {
+  const crv = new ethers.Contract(tokenAddress, CURVE_ABI, App.provider);
+  let minterAddress = tokenAddress;
+  try{
+    minterAddress = await crv.minter();
+  } catch(err) {
+  }
+  const minter = new ethers.Contract(minterAddress, MINTER_ABI, App.provider);
+  const virtualPrice = await minter.get_virtual_price();
+  const coin0 = await minter.coins(0);
+  const token = await getArbitrumToken(App, coin0, stakingAddress);
+  const decimals = await crv.decimals();
+  const staked = await crv.balanceOf(stakingAddress);
+  const unstaked = await crv.balanceOf(App.YOUR_ADDRESS);
+  const name = await crv.name();
+  const symbol = await crv.symbol();
+  const totalSupply = await crv.totalSupply();
+  const decimalDivisor = (10 ** decimals.toNumber()).toString();
+
+  return {
+      address: tokenAddress,
+      name,
+      symbol,
+      totalSupply: totalSupply.div(decimalDivisor).toNumber(0),
+      decimals : decimals.toNumber(),
+      staked:  staked.div(decimalDivisor).toNumber(0),
+      unstaked: unstaked.div(decimalDivisor).toNumber(0),
+      contract: crv,
+      tokens : [tokenAddress, coin0],
+      token,
+      virtualPrice : virtualPrice.div(decimalDivisor).toNumber(0)
+  };
+}
+
 async function getArbitrumStoredToken(App, tokenAddress, stakingAddress, type) {
   switch (type) {
     case "uniswap":
@@ -277,6 +312,8 @@ async function getArbitrumStoredToken(App, tokenAddress, stakingAddress, type) {
     case "arbitrumWantVault":
       const wantVault = new ethcall.Contract(tokenAddress, ARBITRUM_VAULT_WANT_ABI);
       return await getArbitrumWantVault(App, wantVault, tokenAddress, stakingAddress);
+    case "curve":
+      return await getArbitrumCurvePool(App, tokenAddress, stakingAddress);
     case "dlp":
       const dlpPool = new ethcall.Contract(tokenAddress, ARBITRUM_DLP_ABI);
       const [originTokenAddress] = await App.ethcallProvider.all([dlpPool.originToken()]);
@@ -322,8 +359,15 @@ async function getArbitrumToken(App, tokenAddress, stakingAddress) {
     catch(err) {
     }
     try {
-      const VAULT = new ethcall.Contract(tokenAddress, ARBITRUM_VAULT_TOKEN_ABI);
-      const _token = await App.ethcallProvider.all([VAULT.token()]);
+      const res = await getArbitrumCurvePool(App, tokenAddress, stakingAddress);
+      window.localStorage.setItem(tokenAddress, "curve");
+      return res
+    }
+    catch(err) {
+    }
+    try {
+      const VAULT = new ethers.Contract(tokenAddress, ARBITRUM_VAULT_TOKEN_ABI, App.provider);
+      const _token = await VAULT.token()
       const vault = await getArbitrumVault(App, VAULT, tokenAddress, stakingAddress);
       window.localStorage.setItem(tokenAddress, "arbitrumVault");
       return vault;

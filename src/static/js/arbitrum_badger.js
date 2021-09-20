@@ -112,7 +112,7 @@ async function getSettRewards(settAddress, prices, poolPrices, App) {
     startTime = ethers.BigNumber.from(paginatedSchedule[paginatedIndex + 3]);
     endTime = ethers.BigNumber.from(paginatedSchedule[paginatedIndex + 4]);
     duration = ethers.BigNumber.from(paginatedSchedule[paginatedIndex + 5]);
-    
+
     if (endTime.gte(nowTimestamp) && startTime.lte(nowTimestamp)) {
       validTokens[token]= {
           amount: amount,
@@ -142,11 +142,41 @@ async function getSettRewards(settAddress, prices, poolPrices, App) {
 }
 
 
+function getBadgerPoolPrices(prices, pool, chain="eth") {
+  const price = prices[pool.address].usd;
+  var tvl = pool.totalSupply * price / 10 ** pool.decimals;
+  var staked_tvl = pool.staked * price;
+  const poolUrl = chain === 'arbitrum' ? `https://arbiscan.io/token/${pool.address}` : `https://etherscan.io/token/${pool.address}`;
+  const name = `<a href='${poolUrl}' target='_blank'>${pool.symbol}</a>`;
+  const getDexguruTokenlink =  function() {
+    const network = window.location.pathname.split("/")[1]
+    let dexguruTokenlink = '';
+    if (tvl > 0) {
+      if (network && (network.toLowerCase() === 'bsc' || network.toLowerCase() === 'eth' || network.toLowerCase() === 'polygon')) {
+        dexguruTokenlink =   `<a href='https://dex.guru/token/${pool.address.toLowerCase()}-${network.toLowerCase()}' rel='noopener' target='_blank'>[%]</a>`;
+      }
+    }
+    return dexguruTokenlink
+  }
+  return {
+    staked_tvl : staked_tvl,
+    price : price,
+    stakeTokenTicker : pool.symbol,
+    print_price() {
+      _print(`${name} Price: $${formatMoney(price)} Market Cap: $${formatMoney(tvl)} ${getDexguruTokenlink()}`);
+      _print(`Staked: ${pool.staked.toFixed(4)} ${pool.symbol} ($${formatMoney(staked_tvl)})`);
+    },
+    print_contained_price() {
+    }
+  }
+}
+
+
 async function printNonGeyserPool(App, tokens, prices, pool) {
   const tokenUrl = `<a href='https://arbiscan.io/address/${pool.tokenAddress}' target='_blank'>Underlying</a>`;
   const settUrl = `<a href='https://arbiscan.io/address/${pool.settAddress}' target='_blank'>Sett</a>`;
   _print(`${pool.name} - ${tokenUrl} - ${settUrl}`);
-  
+
 
   const settAddress = pool.settAddress;
   const SETT_CONTRACT = new ethers.Contract(settAddress, BADGER_UNI_ABI, App.provider);
@@ -170,7 +200,7 @@ async function printNonGeyserPool(App, tokens, prices, pool) {
   if (lpToken.staked == 0) {
     lpToken.staked = await SETT_CONTRACT.balance() / 1e18;
   }
-  let poolPrices = getPoolPrices(tokens, prices, lpToken);
+  let poolPrices = getBadgerPoolPrices(prices, lpToken, "arbitrum");
 
   poolPrices.print_price();
 
@@ -191,6 +221,20 @@ async function printNonGeyserPool(App, tokens, prices, pool) {
   _print(`\n`);
 }
 
+const formatBadgerPrices = obj =>
+  Object.keys(obj).reduce((acc, key) => {
+    acc[key] = {"usd": obj[key]};
+    return acc;
+  }, {});
+
+const getBadgerPrices = async function(chain = "eth") {
+  const pricesReturn = await $.ajax({
+      url: `https://api.badger.finance/v2/prices?chain=${chain}`,
+      type: 'GET',
+    });
+  return formatBadgerPrices(pricesReturn);
+}
+
 const pools = [
   {
     name : "Wrapped Ether / Sushi Helper",
@@ -201,7 +245,17 @@ const pools = [
     name: "Wrapped BTC/Wrapped ETH",
     tokenAddress: "0x515e252b2b5c22b4b2b6Df66c2eBeeA871AA4d69",
     settAddress: "0xFc13209cAfE8fb3bb5fbD929eC9F11a39e8Ac041",
-  }
+  },
+  {
+    name: "Curve.fi renBTC/wBTC LP",
+    tokenAddress: "0x3E01dD8a5E1fb3481F0F589056b428Fc308AF0Fb",
+    settAddress: "0xBA418CDdd91111F5c1D1Ac2777Fa8CEa28D71843",
+  },
+  {
+    name: "Curve.fi tricrypto LP",
+    tokenAddress: "0x8e0B8c8BB9db49a46697F3a5Bb8A308e744821D2",
+    settAddress: "0x4591890225394BF66044347653e112621AF7DDeb",
+  },
 ];
 
 const registry = "0xfda7eb6f8b7a9e9fcfd348042ae675d1d652454f";
@@ -209,7 +263,7 @@ const badgerAddress = "0xBfa641051Ba0a0Ad1b0AcF549a89536A0D76472E";
 
 async function main() {
     var tokens = {};
-    const prices = await getArbitrumPrices();
+    const prices = await getBadgerPrices("arbitrum");
 
     const App = await init_ethers();
 

@@ -2346,14 +2346,14 @@ function getErc20Prices(prices, pool, chain="eth") {
   }
 }
 
-function getCurvePrices(prices, pool) {
+function getCurvePrices(prices, pool, chain) {
   var price = (getParameterCaseInsensitive(prices,pool.token.address)?.usd ?? 1) * pool.virtualPrice;
   if (getParameterCaseInsensitive(prices, pool.address)?.usd ?? 0 == 0) {
     prices[pool.address] = { usd : price };
   }
   var tvl = pool.totalSupply * price / 10 ** pool.decimals;
   var staked_tvl = pool.staked * price;
-  const poolUrl = `https://etherscan.io/token/${pool.address}`;
+  const poolUrl = chain === 'arbitrum' ? `https://arbiscan.io/token/${pool.address}` : `https://etherscan.io/token/${pool.address}`;
   const name = `<a href='${poolUrl}' target='_blank'>${pool.symbol}</a>`;
   const getDexguruTokenlink =  function() {
     const network = window.location.pathname.split("/")[1]
@@ -2384,7 +2384,7 @@ function getPoolPrices(tokens, prices, pool, chain = "eth") {
   if (pool.poolTokens != null) return getBalancerPrices(tokens, prices, pool);
   if (pool.isGelato) return getGelatoPrices(tokens, prices, pool);
   if (pool.token0 != null) return getUniPrices(tokens, prices, pool);
-  if (pool.virtualPrice != null) return getCurvePrices(prices, pool); //should work for saddle too
+  if (pool.virtualPrice != null) return getCurvePrices(prices, pool, chain); //should work for saddle too
   if (pool.token != null) return getWrapPrices(tokens, prices, pool);
   return getErc20Prices(prices, pool, chain);
 }
