@@ -262,22 +262,24 @@ async function getArbitrumDlpPool(App, dlpPool, tokenAddress, originTokenAddress
 }
 
 async function getArbitrumCurvePool(App, tokenAddress, stakingAddress) {
-  const crv = new ethers.Contract(tokenAddress, CURVE_ABI, App.provider);
+  const crv = new ethcall.Contract(tokenAddress, CURVE_ABI);
+  const crvCalls = [
+    crv.decimals(), crv.balanceOf(stakingAddress),
+    crv.balanceOf(App.YOUR_ADDRESS), crv.name(),
+    crv.symbol(), crv.totalSupply()
+  ]
+  const [decimals, staked, unstaked, name, symbol, totalSupply] = await App.ethcallProvider.all(crvCalls);
   let minterAddress = tokenAddress;
   try{
-    minterAddress = await crv.minter();
+    [minterAddress] = await App.ethcallProvider.all([crv.minter()]);
   } catch(err) {
-  }
-  const minter = new ethers.Contract(minterAddress, MINTER_ABI, App.provider);
-  const virtualPrice = await minter.get_virtual_price();
-  const coin0 = await minter.coins(0);
+    }
+  const minter = new ethcall.Contract(minterAddress, MINTER_ABI);
+  const minterCalls = [
+    minter.get_virtual_price(), minter.coins(0)
+  ]
+  const [virtualPrice, coin0] = await App.ethcallProvider.all(minterCalls);
   const token = await getArbitrumToken(App, coin0, stakingAddress);
-  const decimals = await crv.decimals();
-  const staked = await crv.balanceOf(stakingAddress);
-  const unstaked = await crv.balanceOf(App.YOUR_ADDRESS);
-  const name = await crv.name();
-  const symbol = await crv.symbol();
-  const totalSupply = await crv.totalSupply();
   const decimalDivisor = (10 ** decimals.toNumber()).toString();
 
   return {
@@ -366,7 +368,7 @@ async function getArbitrumToken(App, tokenAddress, stakingAddress) {
     catch(err) {
     }
     try {
-      const VAULT = new ethers.Contract(tokenAddress, ARBITRUM_VAULT_TOKEN_ABI, App.provider);
+      const VAULT = new ethcall.Contract(tokenAddress, ARBITRUM_VAULT_TOKEN_ABI);
       const _token = await VAULT.token()
       const vault = await getArbitrumVault(App, VAULT, tokenAddress, stakingAddress);
       window.localStorage.setItem(tokenAddress, "arbitrumVault");
