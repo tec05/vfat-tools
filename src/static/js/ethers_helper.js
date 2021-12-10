@@ -54,6 +54,9 @@ const pageNetwork = function() {
   if (network.toLowerCase() === 'velas') {
     return window.NETWORKS.VELAS
   }
+  if (network.toLowerCase() === 'shiden') {
+    return window.NETWORKS.SHIDEN
+  }
   if (network.toLowerCase() === 'aurora') {
     return window.NETWORKS.AURORA
   }
@@ -2806,6 +2809,9 @@ function getErc20Prices(prices, pool, chain="eth") {
     case "velas":
       poolUrl=`https://evmexplorer.velas.com/address/${pool.address}`;
       break;
+    case "shiden":
+      poolUrl=`https://shiden.subscan.io/address/${pool.address}`;
+      break;
     case "aurora":
       poolUrl=`https://explorer.mainnet.aurora.dev/address/${pool.address}`;
       break;
@@ -3488,6 +3494,9 @@ async function printSynthetixPool(App, info, chain="eth", customURLs) {
       case "velas":
         _print(`<a target="_blank" href="https://evmexplorer.velas.com/address/${info.stakingAddress}#code">Velas Scan</a>`);
         break;
+      case "shiden":
+        _print(`<a target="_blank" href="https://shiden.subscan.io/address/${info.stakingAddress}#code">Shiden Subscan</a>`);
+        break;
       case "aurora":
         _print(`<a target="_blank" href="https://explorer.mainnet.aurora.dev/address/${info.stakingAddress}#code">Aurora Explorer</a>`);
         break;
@@ -3655,6 +3664,8 @@ function getChainExplorerUrl(chain, address){
       return `https://cronos.crypto.org/explorer/address/${address}`;
     case "velas" :
       return `https://evmexplorer.velas.com/address/${address}`;
+    case "shiden" :
+      return `https://shiden.subscan.io/address/${address}`;
     case "aurora" :
       return `https://explorer.mainnet.aurora.dev/address/${address}`;
     case "boba" :

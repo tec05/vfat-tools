@@ -234,6 +234,21 @@ window.NETWORKS = {
       "https://evmexplorer.velas.com"
     ],
   },
+  SHIDEN: {
+    "chainId": "0x150",
+    "chainName": "Shiden",
+    "nativeCurrency": {
+      "name": "Shiden",
+      "symbol": "SDN",
+      "decimals": 18
+    },
+    "rpcUrls": [
+      "https://rpc.shiden.astar.network:8545"
+    ],
+    "blockExplorerUrls": [
+      "https://shiden.subscan.io"
+    ],
+  },
   AURORA: {
     "chainId": "0x4E454152",
     "chainName": "Aurora MainNet",
